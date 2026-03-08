@@ -1,35 +1,5 @@
 {
   "entities": {
-    "User": {
-      "title": "User",
-      "description": "A user of the lost and found application.",
-      "type": "object",
-      "properties": {
-        "uid": {
-          "type": "string",
-          "description": "The unique identifier for the user."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The user's display name."
-        },
-        "photoURL": {
-          "type": "string",
-          "description": "The URL to the user's profile photo."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "When the user account was created."
-        }
-      },
-      "required": ["uid", "email", "createdAt"]
-    },
     "Item": {
       "title": "Item",
       "description": "A lost or found item reported by a user.",
@@ -62,10 +32,6 @@
           "enum": ["open", "resolved"],
           "description": "The current status of the item."
         },
-        "authorUid": {
-          "type": "string",
-          "description": "The UID of the user who reported the item."
-        },
         "authorName": {
           "type": "string",
           "description": "The display name of the user who reported the item."
@@ -81,16 +47,10 @@
           "description": "When the item was last updated."
         }
       },
-      "required": ["type", "title", "description", "location", "date", "status", "authorUid", "authorName", "createdAt", "updatedAt"]
+      "required": ["type", "title", "description", "location", "date", "status", "authorName", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/User"
-      },
-      "description": "Stores user profiles."
-    },
     "/items/{itemId}": {
       "schema": {
         "$ref": "#/entities/Item"

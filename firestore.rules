@@ -7,15 +7,6 @@ service cloud.firestore {
     // Assumed Data Model
     // ===============================================================
     //
-    // Collection: users
-    // Document ID: {userId}
-    // Fields:
-    //   - uid: string (required) - User's UID
-    //   - email: string (required) - User's email
-    //   - displayName: string (optional) - User's display name
-    //   - photoURL: string (optional) - User's photo URL
-    //   - createdAt: timestamp (required) - Account creation time
-    //
     // Collection: items
     // Document ID: {itemId}
     // Fields:
@@ -25,7 +16,6 @@ service cloud.firestore {
     //   - location: string (required, max 200 chars) - Location lost/found
     //   - date: string (required, ISO 8601 date string) - Date lost/found
     //   - status: string (required, 'open' or 'resolved') - Item status
-    //   - authorUid: string (required) - Creator's UID
     //   - authorName: string (required, max 100 chars) - Creator's name
     //   - createdAt: timestamp (required) - Creation time
     //   - updatedAt: timestamp (required) - Last update time
@@ -35,34 +25,6 @@ service cloud.firestore {
     // ===============================================================
     // Helper Functions
     // ===============================================================
-
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.authorUid;
-    }
-
-    function uidUnchanged() {
-      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
-    }
-
-    function authorUidUnchanged() {
-      return !('authorUid' in request.resource.data) || request.resource.data.authorUid == request.auth.uid;
-    }
-
-    function authorUidNotModified() {
-      return !('authorUid' in request.resource.data) || request.resource.data.authorUid == resource.data.authorUid;
-    }
-
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
 
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
@@ -78,10 +40,6 @@ service cloud.firestore {
              request.resource.data[field].size() <= maxLen;
     }
 
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
     function isValidDateString(dateStr) {
       return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
     }
@@ -90,24 +48,14 @@ service cloud.firestore {
     // Domain Validators
     // ===============================================================
 
-    function isValidUser() {
-      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'createdAt']) &&
-             request.resource.data.uid is string &&
-             request.resource.data.email is string && isValidEmail(request.resource.data.email) &&
-             request.resource.data.createdAt is timestamp &&
-             (!('displayName' in request.resource.data) || isValidString('displayName', 1, 100)) &&
-             (!('photoURL' in request.resource.data) || isValidString('photoURL', 1, 500));
-    }
-
     function isValidItem() {
-      return hasOnlyAllowedFields(['type', 'title', 'description', 'location', 'date', 'status', 'authorUid', 'authorName', 'createdAt', 'updatedAt']) &&
+      return hasOnlyAllowedFields(['type', 'title', 'description', 'location', 'date', 'status', 'authorName', 'createdAt', 'updatedAt']) &&
              request.resource.data.type in ['lost', 'found'] &&
              isValidString('title', 1, 100) &&
              isValidString('description', 1, 1000) &&
              isValidString('location', 1, 200) &&
              isValidDateString(request.resource.data.date) &&
              request.resource.data.status in ['open', 'resolved'] &&
-             request.resource.data.authorUid is string &&
              isValidString('authorName', 1, 100) &&
              request.resource.data.createdAt is timestamp &&
              request.resource.data.updatedAt is timestamp;
@@ -117,18 +65,11 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
-    match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser() && uidUnchanged();
-      allow update: if isOwner(userId) && isValidUser() && areImmutableFieldsUnchanged(['uid', 'email', 'createdAt']);
-      allow delete: if isOwner(userId);
-    }
-
     match /items/{itemId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidItem() && authorUidUnchanged();
-      allow update: if isDocOwner() && isValidItem() && authorUidNotModified() && areImmutableFieldsUnchanged(['createdAt', 'authorUid']);
-      allow delete: if isDocOwner();
+      allow read: if true;
+      allow create: if isValidItem();
+      allow update: if isValidItem() && areImmutableFieldsUnchanged(['createdAt']);
+      allow delete: if true;
     }
   }
 }

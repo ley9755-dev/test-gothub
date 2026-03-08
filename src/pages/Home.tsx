@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { format } from 'date-fns';
-import { MapPin, Clock, CheckCircle, Search, Trash2, Edit } from 'lucide-react';
+import { MapPin, Clock, CheckCircle, Search, Trash2 } from 'lucide-react';
 
 interface Item {
   id: string;
@@ -16,7 +15,6 @@ interface Item {
   location: string;
   date: string;
   status: 'open' | 'resolved';
-  authorUid: string;
   authorName: string;
   createdAt: string;
   updatedAt: string;
@@ -27,7 +25,6 @@ export function Home() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'lost' | 'found'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'resolved'>('open');
-  const { user } = useAuth();
 
   useEffect(() => {
     const q = query(collection(db, 'items'), orderBy('createdAt', 'desc'));
@@ -53,11 +50,10 @@ export function Home() {
   }, []);
 
   const handleResolve = async (itemId: string) => {
-    if (!user) return;
     try {
       await updateDoc(doc(db, 'items', itemId), {
         status: 'resolved',
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       });
     } catch (error) {
       console.error("Error updating item status:", error);
@@ -65,7 +61,7 @@ export function Home() {
   };
 
   const handleDelete = async (itemId: string) => {
-    if (!user) return;
+    if (!window.confirm('정말로 이 게시물을 삭제하시겠습니까?')) return;
     try {
       await deleteDoc(doc(db, 'items', itemId));
     } catch (error) {
@@ -169,16 +165,16 @@ export function Home() {
                   <span>{item.createdAt ? format(new Date(item.createdAt), 'MM/dd') : ''}</span>
                 </div>
                 
-                {user && user.uid === item.authorUid && item.status === 'open' && (
-                  <div className="flex gap-2">
+                <div className="flex gap-2">
+                  {item.status === 'open' && (
                     <Button variant="outline" size="sm" onClick={() => handleResolve(item.id)} className="h-8 text-xs">
                       해결 완료
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardFooter>
             </Card>
           ))}

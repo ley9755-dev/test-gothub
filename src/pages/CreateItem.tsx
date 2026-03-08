@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -10,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 
 export function CreateItem() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +19,7 @@ export function CreateItem() {
     description: '',
     location: '',
     date: new Date().toISOString().split('T')[0],
+    authorName: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -30,12 +29,8 @@ export function CreateItem() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      setError('로그인이 필요합니다.');
-      return;
-    }
 
-    if (!formData.title || !formData.description || !formData.location || !formData.date) {
+    if (!formData.title || !formData.description || !formData.location || !formData.date || !formData.authorName) {
       setError('모든 필드를 입력해주세요.');
       return;
     }
@@ -44,13 +39,14 @@ export function CreateItem() {
     setError(null);
 
     try {
-      const now = new Date().toISOString();
       const itemData = {
-        ...formData,
+        type: formData.type,
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
         date: new Date(formData.date).toISOString(),
         status: 'open',
-        authorUid: user.uid,
-        authorName: user.displayName || '익명',
+        authorName: formData.authorName,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -64,17 +60,6 @@ export function CreateItem() {
       setLoading(false);
     }
   };
-
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <AlertCircle className="w-12 h-12 text-muted-foreground" />
-        <h2 className="text-xl font-semibold">로그인이 필요합니다</h2>
-        <p className="text-muted-foreground">게시물을 등록하려면 먼저 로그인해주세요.</p>
-        <Button onClick={() => navigate('/')}>홈으로 돌아가기</Button>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -173,6 +158,21 @@ export function CreateItem() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="authorName" className="text-sm font-medium leading-none">
+                작성자 이름
+              </label>
+              <Input
+                id="authorName"
+                name="authorName"
+                placeholder="예: 홍길동 (또는 익명)"
+                value={formData.authorName}
+                onChange={handleChange}
+                maxLength={50}
+                required
+              />
             </div>
 
             <div className="space-y-2">
